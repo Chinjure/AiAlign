@@ -1,0 +1,29 @@
+# Python virtual environment
+venv/
+
+# Model weights and large data
+Qwen3-aligner-main/Qwen/
+Qwen3-aligner-main/FireRedVAD/
+LyricsAlignment-MTL/checkpoints/
+SeperateModels/
+VolcalParse/vocalparse-weights/
+
+# Git repos inside subprojects
+generate-lyrics/.git/
+recorrect/.git/
+LyricsAlignment-MTL/.git/
+Qwen3-aligner-main/.git/
+VolcalParse/.git/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

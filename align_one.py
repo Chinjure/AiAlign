@@ -50,8 +50,13 @@ def main():
 
     # Step 1: Alignment
     if os.path.exists(csv_path):
-        print(f"CSV exists, skip alignment: {csv_path}")
-    else:
+        if os.path.getmtime(txt_path) > os.path.getmtime(csv_path):
+            print("CSV is stale (lyrics updated), re-aligning...")
+            os.remove(csv_path)
+        else:
+            print(f"CSV exists, skip alignment: {csv_path}")
+
+    if not os.path.exists(csv_path):
         print("Running alignment (MTL_BDR, CPU)...")
         align_cmd = (
             f"import sys; sys.path.insert(0, {MTL_DIR!r}); "

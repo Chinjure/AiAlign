@@ -75,8 +75,14 @@ def _split_transcribed_lines(text: str) -> str:
     # Step 4: restore periods
     sentences = [s.replace('\x00', '.') for s in sentences]
 
-    # Step 5: filter empty lines
-    lines = [s.strip() for s in sentences if s.strip()]
+    # Step 5: split each sentence on commas (protect numeric commas like 1,000)
+    _COMMA_SPLIT = re.compile(r'(?<!\d),(?!\d)\s*')
+    fragments = []
+    for s in sentences:
+        fragments.extend(_COMMA_SPLIT.split(s))
+
+    # Step 6: filter empty lines
+    lines = [f.strip() for f in fragments if f.strip()]
 
     return '\n'.join(lines)
 
@@ -246,15 +252,15 @@ def _step_correct_lrc(asr_file: str, ref_file: str, output_dir: str,
 
     with open(corrected_txt, 'r', encoding='utf-8') as f:
         lines = [l for l in f.read().splitlines() if l.strip()]
-    with open(ref_file, 'r', encoding='utf-8') as f:
-        ref_lines = [l for l in f.read().splitlines() if l.strip()]
-    loss_ratio = (len(ref_lines) - len(lines)) / max(len(ref_lines), 1)
+    with open(asr_file, 'r', encoding='utf-8') as f:
+        asr_input_lines = [l for l in f.read().splitlines() if l.strip()]
+    loss_ratio = (len(asr_input_lines) - len(lines)) / max(len(asr_input_lines), 1)
     if loss_ratio > 0.5:
-        log_info(f"  WARNING: calibration lost {loss_ratio:.0%} lines ({len(ref_lines)}->{len(lines)}), keeping reference")
+        log_info(f"  WARNING: calibration lost {loss_ratio:.0%} of ASR lines ({len(asr_input_lines)}->{len(lines)}), keeping reference")
         csvs = [csv_asr, csv_ref]
         return (True, ref_file, [asr_lrc, ref_lrc] + [c for c in csvs if os.path.exists(c)])
 
-    log_info(f"  Corrected: {corrected_txt} ({len(lines)} lines, ref={len(ref_lines)})")
+    log_info(f"  Corrected: {corrected_txt} ({len(lines)} lines, asr={len(asr_input_lines)})")
     tracked = [asr_lrc, ref_lrc, corrected_txt, corrected_base + ".lrc"]
     for ext in ['.srt', '.json']:
         f = corrected_base + ext
@@ -287,13 +293,13 @@ def _step_correct_txt(asr_file: str, ref_file: str, output_dir: str,
     if os.path.exists(corrected_txt):
         with open(corrected_txt, 'r', encoding='utf-8') as f:
             lines = [l for l in f.read().splitlines() if l.strip()]
-        with open(ref_file, 'r', encoding='utf-8') as f:
-            ref_lines = [l for l in f.read().splitlines() if l.strip()]
-        loss_ratio = (len(ref_lines) - len(lines)) / max(len(ref_lines), 1)
+        with open(asr_file, 'r', encoding='utf-8') as f:
+            asr_input_lines = [l for l in f.read().splitlines() if l.strip()]
+        loss_ratio = (len(asr_input_lines) - len(lines)) / max(len(asr_input_lines), 1)
         if loss_ratio > 0.5:
-            log_info(f"  WARNING: calibration lost {loss_ratio:.0%} lines ({len(ref_lines)}->{len(lines)}), keeping original reference")
+            log_info(f"  WARNING: calibration lost {loss_ratio:.0%} of ASR lines ({len(asr_input_lines)}->{len(lines)}), keeping reference")
             return (True, ref_file, extra_tracked)
-        log_info(f"  Corrected: {corrected_txt} ({len(lines)} lines, ref={len(ref_lines)}, repeats={max(0, len(lines)-len(ref_lines))})")
+        log_info(f"  Corrected: {corrected_txt} ({len(lines)} lines, asr={len(asr_input_lines)}, repeats={max(0, len(lines)-len(asr_input_lines))})")
         return (True, corrected_txt, [corrected_txt] + extra_tracked)
 
     return (True, ref_file, extra_tracked)

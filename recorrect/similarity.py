@@ -53,23 +53,27 @@ def _similarity_cjk(a: str, b: str) -> float:
 
 
 def _similarity_en(a: str, b: str) -> float:
-    """Hybrid: character-level primary + word-overlap boost for English."""
-    words_a = a.split()
-    words_b = b.split()
+    """Hybrid: character-level primary + trigram-overlap boost for English.
 
+    Uses character trigrams instead of word overlap because input text
+    is pre-normalized (no spaces), making word-split useless.
+    """
     # Character-level: handles typos, missing letters
     char_score = SequenceMatcher(None, a, b).ratio()
 
-    if not words_a or not words_b:
-        return char_score
+    # Character trigram overlap — works with or without spaces
+    def _trigrams(s):
+        return {s[i:i + 3] for i in range(len(s) - 2)}
 
-    # Word overlap boost
-    set_a = set(words_a)
-    set_b = set(words_b)
-    word_jac = len(set_a & set_b) / len(set_a | set_b)
+    tri_a = _trigrams(a)
+    tri_b = _trigrams(b)
+    if tri_a and tri_b:
+        tri_jac = len(tri_a & tri_b) / len(tri_a | tri_b)
+    else:
+        tri_jac = 0.0
 
-    # Blend: char-level dominant, word overlap as boost
-    return 0.65 * char_score + 0.35 * word_jac
+    # Blend: char-level dominant, trigram overlap as boost
+    return 0.65 * char_score + 0.35 * tri_jac
 
 
 MIN_MATCH_SCORE = 0.2

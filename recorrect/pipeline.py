@@ -249,11 +249,51 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
             matched_refs.add(best_j)
             scores.append(best_score)
 
+    # ── Length-aware merge: merge short ASR fragments ──
+
+    LENGTH_RATIO = 0.8   # ASR line shorter than 80% of ref → candidate for merge
+    MERGE_SCORE_GAIN = 1.05  # merge must improve similarity by 5%
+
+    merged_norm = list(asr_norms)
+    skipped = set()
+
+    for i in range(n_asr):
+        if i in skipped or i not in asr_to_ref:
+            continue
+
+        j = asr_to_ref[i]
+        a_len = len(merged_norm[i])
+        r_len = len(ref_norms[j])
+
+        if a_len > 0 and r_len > 0 and a_len < r_len * LENGTH_RATIO and i + 1 < n_asr:
+            combined = merged_norm[i] + ' ' + asr_norms[i + 1]
+            orig_s = similarity(merged_norm[i], ref_norms[j])
+            new_s = similarity(combined, ref_norms[j])
+
+            if new_s > orig_s * MERGE_SCORE_GAIN:
+                merged_norm[i] = combined
+                skipped.add(i + 1)
+                asr_to_ref.pop(i + 1, None)
+                # Re-match the combined text to find the best-matching ref
+                best_j = j
+                best_score = new_s
+                for rj in range(n_ref):
+                    s = similarity(combined, ref_norms[rj])
+                    if s > best_score:
+                        best_score = s
+                        best_j = rj
+                if best_score >= MIN_MATCH_SCORE:
+                    asr_to_ref[i] = best_j
+                    matched_refs.add(best_j)
+
     # ── Build output in ASR order ──
 
     corrected = []
     i = 0
     while i < n_asr:
+        if i in skipped:
+            i += 1
+            continue
         if i not in asr_to_ref:
             # ASR line has no good ref match — keep ASR text + time
             corrected.append({
@@ -273,9 +313,9 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
         # (Close = ASR artifact; far apart = real repeated lyric)
         merge_count = 1
         k = i + 1
-        while k < n_asr and asr_to_ref.get(k) == j:
+        while k < n_asr and k not in skipped and asr_to_ref.get(k) == j:
             dt = asr_entries[k]['start_time'] - asr_entries[k - 1]['start_time']
-            if dt > 4.0 or similarity(asr_norms[k], asr_norms[i]) < 0.7:
+            if dt > 4.0 or similarity(merged_norm[k], merged_norm[i]) < 0.7:
                 break
             merge_count += 1
             k += 1
@@ -286,7 +326,7 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
                 'start_time': asr_entries[i]['start_time'],
                 'asr_index': i,
                 'ref_index': j,
-                'score': similarity(asr_norms[i], ref_norms[j]),
+                'score': similarity(merged_norm[i], ref_norms[j]),
                 'is_merge': True,
                 'is_split': False,
             })
@@ -294,18 +334,50 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
             continue
 
         # Check SPLIT: does this ASR match multiple consecutive refs better?
-        # ASR text similarity to ref[j] vs ref[j]+ref[j+1] combined
-        if j + 1 < n_ref:
-            combined_ref = ref_norms[j] + ' ' + ref_norms[j + 1]
-            if similarity(asr_norms[i], combined_ref) > similarity(asr_norms[i], ref_norms[j]) * 1.2:
-                # ASR merges two ref lines — split them
-                for sj in (j, j + 1):
+        # Length-aware: if ref is much shorter than ASR, expand more aggressively
+        # and try both forward and backward directions
+        ref_len = len(ref_norms[j])
+        asr_len = len(merged_norm[i])
+        ref_short = asr_len > 0 and ref_len < asr_len * LENGTH_RATIO
+        max_width = 8 if ref_short else 2
+
+        # Find the best starting ref index (may back up if ref is too short)
+        start_j = j
+        if ref_short:
+            # Back up while adding the previous ref improves the combined match
+            while start_j > 0:
+                back_combined = ref_norms[start_j - 1] + ' ' + ref_norms[start_j]
+                back_score = similarity(merged_norm[i], back_combined)
+                curr_score = similarity(merged_norm[i], ref_norms[start_j])
+                if back_score > curr_score * MERGE_SCORE_GAIN:
+                    start_j -= 1
+                else:
+                    break
+
+        # Expand forward from the best starting ref
+        if start_j + 1 < n_ref:
+            combined_ref = ref_norms[start_j]
+            best_width = 1
+            best_score = similarity(merged_norm[i], ref_norms[start_j])
+
+            for w in range(2, min(max_width + 1, n_ref - start_j + 1)):
+                combined_ref = combined_ref + ' ' + ref_norms[start_j + w - 1]
+                score = similarity(merged_norm[i], combined_ref)
+                if score > best_score * MERGE_SCORE_GAIN:
+                    best_width = w
+                    best_score = score
+                else:
+                    break
+
+            if best_width > 1:
+                # ASR covers multiple ref lines — split them
+                for sj in range(start_j, start_j + best_width):
                     corrected.append({
                         'text': ref_entries[sj]['text'],
                         'start_time': asr_entries[i]['start_time'],
                         'asr_index': i,
                         'ref_index': sj,
-                        'score': similarity(asr_norms[i], ref_norms[sj]),
+                        'score': similarity(merged_norm[i], ref_norms[sj]),
                         'is_merge': False,
                         'is_split': True,
                     })
@@ -319,7 +391,7 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
             'start_time': asr_entries[i]['start_time'],
             'asr_index': i,
             'ref_index': j,
-            'score': similarity(asr_norms[i], ref_norms[j]),
+            'score': similarity(merged_norm[i], ref_norms[j]),
             'is_merge': False,
             'is_split': False,
         })

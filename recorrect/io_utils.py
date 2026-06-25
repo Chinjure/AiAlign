@@ -30,14 +30,21 @@ def load_asr(path: str) -> list[dict]:
 _SENTENCE_END = re.compile(r'(?<=[.!?])\s+')
 # Known abbreviations whose period is not a sentence boundary.
 _ABBREV = re.compile(r'\b(Mrs|Mr|Ms|Dr|Prof|St|Jr|Sr|Capt|Col|Gen|Lt|Maj|Rev|Hon)\.')
+# Comma split that protects numeric commas (e.g. 1,000)
+_COMMA_SPLIT = re.compile(r'(?<!\d),(?!\d)\s*')
 
 
 def _split_sentences(text: str) -> list[str]:
     """Split a continuous ASR blob into sentences at . ! ? boundaries,
-    protecting known abbreviations (Mr. Mrs. Dr. etc.) from false splits."""
+    protecting known abbreviations (Mr. Mrs. Dr. etc.) from false splits,
+    then split each sentence on commas (protecting numeric commas)."""
     protected = _ABBREV.sub(r'\1<DOT>', text.strip())
     parts = _SENTENCE_END.split(protected)
-    return [p.strip().replace('<DOT>', '.') for p in parts if p.strip()]
+    sentences = [p.strip().replace('<DOT>', '.') for p in parts if p.strip()]
+    result = []
+    for s in sentences:
+        result.extend(f.strip() for f in _COMMA_SPLIT.split(s) if f.strip())
+    return result
 
 
 def _is_continuous_blob(lines: list[str]) -> bool:

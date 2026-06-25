@@ -205,18 +205,15 @@ TIME_WINDOW = 3.0       # seconds — max time gap for matching
 
 def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
                        time_window: float = TIME_WINDOW) -> dict:
-    """Calibrate ASR-transcribed LRC against official-lyric LRC using
-    time-stamp probes.
+    """Calibrate ASR-transcribed LRC against reference LRC using text matching.
 
-    Each ASR line is matched to the ref line with the closest timestamp
-    within the time window (time-probe matching). Each ref line is also
-    matched back to its closest ASR line. The intersection of both
-    directions produces high-confidence 1:1 pairs. Unmatched ref lines
-    are inserted in chronological position.
+    Strategy: ASR order is authoritative (reflects actual song structure).
+    Reference provides correct words. Each ASR line is matched to its best
+    reference counterpart by text similarity. ASR lines are never discarded.
+    Timestamps come from the ASR.
 
     Returns:
-        corrected:  list[dict]  — {text, start_time, asr_index, ref_index, score,
-                                    is_merge, is_split}
+        corrected:  list[dict]  — {text, start_time, asr_index, ref_index, score}
         unmatched:  list[int]   — ref indices with no ASR match
         avg_score:  float
     """
@@ -232,124 +229,101 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
     asr_norms = [normalize(e['text']) for e in asr_entries]
     ref_norms = [normalize(e['text']) for e in ref_entries]
 
-    # ── Bidirectional time-probe matching ──
+    # ── Text-based matching: ASR → Ref by similarity ──
 
-    # ASR → ref: each ASR line picks its closest ref by time
-    asr_to_ref = {}  # i → j
-    for i in range(n_asr):
-        t_asr = asr_entries[i]['start_time']
-        best_j = -1
-        best_dt = time_window + 1
-        for j in range(n_ref):
-            dt = abs(ref_entries[j]['start_time'] - t_asr)
-            if dt < best_dt:
-                best_dt = dt
-                best_j = j
-        if best_dt <= time_window:
-            # Only pair if text agrees — pure time match with wrong text
-            # is worse than no match (unmatched lines keep ref text+time)
-            if similarity(asr_norms[i], ref_norms[best_j]) >= MIN_MATCH_SCORE:
-                asr_to_ref[i] = best_j
-
-    # Ref → ASR: each ref line picks its closest ASR by time
-    ref_to_asr = {}  # j → i
-    for j in range(n_ref):
-        t_ref = ref_entries[j]['start_time']
-        best_i = -1
-        best_dt = time_window + 1
-        for i in range(n_asr):
-            dt = abs(asr_entries[i]['start_time'] - t_ref)
-            if dt < best_dt:
-                best_dt = dt
-                best_i = i
-        if best_dt <= time_window:
-            if similarity(asr_norms[best_i], ref_norms[j]) >= MIN_MATCH_SCORE:
-                ref_to_asr[j] = best_i
-
-    # ── Build output in ref order ──
-    corrected = []
+    # For each ASR line, find best-matching ref line (purely by text)
+    asr_to_ref = {}  # i → j  (1:1 best match)
     matched_refs = set()
     scores = []
 
-    # Group: ref → list of ASR indices that claim it
-    ref_claimed_by = {}  # j → [i, ...]
-    for i, j in asr_to_ref.items():
-        if j not in ref_claimed_by:
-            ref_claimed_by[j] = []
-        ref_claimed_by[j].append(i)
+    for i in range(n_asr):
+        best_j = -1
+        best_score = 0.0
+        for j in range(n_ref):
+            s = similarity(asr_norms[i], ref_norms[j])
+            if s > best_score:
+                best_score = s
+                best_j = j
+        if best_score >= MIN_MATCH_SCORE:
+            asr_to_ref[i] = best_j
+            matched_refs.add(best_j)
+            scores.append(best_score)
 
-    # Group: ASR → list of ref indices that claim it
-    asr_claimed_by = {}  # i → [j, ...]
-    for j, i in ref_to_asr.items():
-        if i not in asr_claimed_by:
-            asr_claimed_by[i] = []
-        asr_claimed_by[i].append(j)
+    # ── Build output in ASR order ──
 
-    j = 0
-    while j < n_ref:
-        if j not in ref_to_asr:
-            # Ref has no close ASR — insert with ref time, ref text
+    corrected = []
+    i = 0
+    while i < n_asr:
+        if i not in asr_to_ref:
+            # ASR line has no good ref match — keep ASR text + time
             corrected.append({
-                'text': ref_entries[j]['text'],
-                'start_time': ref_entries[j]['start_time'],
-                'asr_index': -1,
-                'ref_index': j,
+                'text': asr_entries[i]['text'],
+                'start_time': asr_entries[i]['start_time'],
+                'asr_index': i,
+                'ref_index': -1,
                 'score': 0.0,
-                'is_merge': False,
-                'is_split': False,
             })
-            j += 1
+            i += 1
             continue
 
-        i = ref_to_asr[j]  # ASR that ref j claims as closest
+        j = asr_to_ref[i]  # best ref match for this ASR line
 
-        # Check SPLIT: does this ASR get claimed by multiple consecutive refs
-        # AND does the ASR text have reasonable similarity to each ref?
-        if i in asr_claimed_by and len(asr_claimed_by[i]) > 1:
-            split_refs = sorted(asr_claimed_by[i])
-            is_consecutive = all(
-                split_refs[k] == split_refs[0] + k for k in range(len(split_refs))
-            )
-            if is_consecutive and j == split_refs[0]:
-                # Verify: ASR text must be similar to every ref in the split
-                all_sims = [similarity(asr_norms[i], ref_norms[sj]) for sj in split_refs]
-                if all(s >= MIN_MATCH_SCORE for s in all_sims):
-                    for sj in split_refs:
-                        corrected.append({
-                            'text': ref_entries[sj]['text'],
-                            'start_time': ref_entries[sj]['start_time'],
-                            'asr_index': i,
-                            'ref_index': sj,
-                            'score': all_sims[split_refs.index(sj)],
-                            'is_merge': False,
-                            'is_split': True,
-                        })
-                        matched_refs.add(sj)
-                        scores.append(all_sims[split_refs.index(sj)])
-                    j = split_refs[-1] + 1
-                    continue
+        # Check MERGE: do consecutive ASR lines match the same ref,
+        # look textually similar, AND are close in time?
+        # (Close = ASR artifact; far apart = real repeated lyric)
+        merge_count = 1
+        k = i + 1
+        while k < n_asr and asr_to_ref.get(k) == j:
+            dt = asr_entries[k]['start_time'] - asr_entries[k - 1]['start_time']
+            if dt > 4.0 or similarity(asr_norms[k], asr_norms[i]) < 0.7:
+                break
+            merge_count += 1
+            k += 1
 
-        # Check MERGE: do multiple ASR lines claim this ref?
-        is_merge = j in ref_claimed_by and len(ref_claimed_by[j]) > 1
-        # Use earliest ASR time among the merged ASR lines
-        start_t = ref_entries[j]['start_time']  # default: ref time
-        if is_merge:
-            merged_asr_indices = ref_claimed_by[j]
-            start_t = min(asr_entries[ai]['start_time'] for ai in merged_asr_indices)
+        if merge_count > 1:
+            corrected.append({
+                'text': ref_entries[j]['text'],
+                'start_time': asr_entries[i]['start_time'],
+                'asr_index': i,
+                'ref_index': j,
+                'score': similarity(asr_norms[i], ref_norms[j]),
+                'is_merge': True,
+                'is_split': False,
+            })
+            i += merge_count
+            continue
 
-        text_sim = similarity(asr_norms[i], ref_norms[j])
+        # Check SPLIT: does this ASR match multiple consecutive refs better?
+        # ASR text similarity to ref[j] vs ref[j]+ref[j+1] combined
+        if j + 1 < n_ref:
+            combined_ref = ref_norms[j] + ' ' + ref_norms[j + 1]
+            if similarity(asr_norms[i], combined_ref) > similarity(asr_norms[i], ref_norms[j]) * 1.2:
+                # ASR merges two ref lines — split them
+                for sj in (j, j + 1):
+                    corrected.append({
+                        'text': ref_entries[sj]['text'],
+                        'start_time': asr_entries[i]['start_time'],
+                        'asr_index': i,
+                        'ref_index': sj,
+                        'score': similarity(asr_norms[i], ref_norms[sj]),
+                        'is_merge': False,
+                        'is_split': True,
+                    })
+                    matched_refs.add(sj)
+                i += 1
+                continue
+
+        # Default: 1:1 match
         corrected.append({
             'text': ref_entries[j]['text'],
-            'start_time': start_t,
+            'start_time': asr_entries[i]['start_time'],
             'asr_index': i,
             'ref_index': j,
-            'score': text_sim,
-            'is_merge': is_merge,
+            'score': similarity(asr_norms[i], ref_norms[j]),
+            'is_merge': False,
             'is_split': False,
         })
-        matched_refs.add(j)
-        scores.append(text_sim)
-        j += 1
+        i += 1
 
     unmatched = [j for j in range(n_ref) if j not in matched_refs]
     avg_score = sum(scores) / len(scores) if scores else 0.0

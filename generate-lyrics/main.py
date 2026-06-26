@@ -81,13 +81,17 @@ def _process_one(music_file: str, args: argparse.Namespace) -> Optional[str]:
         log_info(f"  WARNING: LRCLIB search failed: {result}")
 
     # Step 5: Align → LRC
-    ok, result, files = step_align(vocal_wav, align_input, output_dir, safe_name)
-    if not ok:
-        fatal("4 (align)", result)
-    lrc_path = result
-    for f in files:
-        if f != lrc_path:
-            cleaner.track(f)
+    if align_input.endswith('.lrc'):
+        # Already an LRC from recorrect fallback (e.g. poor ASR quality)
+        lrc_path = align_input
+    else:
+        ok, result, files = step_align(vocal_wav, align_input, output_dir, safe_name)
+        if not ok:
+            fatal("4 (align)", result)
+        lrc_path = result
+        for f in files:
+            if f != lrc_path:
+                cleaner.track(f)
 
     # Upload (optional)
     if args.upload:

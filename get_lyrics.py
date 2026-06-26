@@ -73,21 +73,53 @@ def extract_metadata(filepath):
     return title.strip() if title else "", artist.strip() if artist else ""
 
 
-def search_lyrics_lrclib(title, artist):
-    """Search lyrics on LRCLIB. Returns plain lyrics text or None."""
+# Edition suffixes that can cause LRCLIB to return truncated entries
+_EDITION_RE = re.compile(
+    r'\s*\([^)]*(?:Remastered|Remaster|Deluxe|Edition|Bonus'
+    r'|Expanded|Version|Mix|Edit|Re-?issue|Reissue|Anniversary'
+    r'|Collectors|Special|Limited|Extended|Single|EP)[^)]*\)\s*$',
+    re.IGNORECASE
+)
+
+
+def _clean_title(title: str) -> str:
+    """Strip edition suffixes like '(Remastered)', '(Deluxe Edition)' from title."""
+    cleaned = _EDITION_RE.sub('', title).strip()
+    return cleaned or title
+
+
+def _fetch_lrclib_get(title, artist, timeout=15):
+    """Try /api/get exact match. Returns plainLyrics or empty string."""
     try:
         resp = requests.get(
             f"{LRCLIB_API}/get",
             params={"artist_name": artist, "track_name": title},
-            timeout=15
+            timeout=timeout
         )
         if resp.status_code == 200:
             data = resp.json()
             plain = data.get("plainLyrics", "")
             if plain and plain.strip():
                 return plain.strip()
-    except Exception as e:
-        print(f"  LRCLIB exact match failed: {e}")
+    except Exception:
+        pass
+    return ""
+
+
+def search_lyrics_lrclib(title, artist):
+    """Search lyrics on LRCLIB. Returns plain lyrics text or None."""
+    # Exact match with original title
+    best = _fetch_lrclib_get(title, artist)
+
+    # If title has edition suffix, also try cleaned title — pick the longer lyrics
+    clean_title = _clean_title(title)
+    if clean_title != title:
+        alt = _fetch_lrclib_get(clean_title, artist)
+        if len(alt) > len(best):
+            best = alt
+
+    if best:
+        return best
 
     try:
         resp = requests.get(

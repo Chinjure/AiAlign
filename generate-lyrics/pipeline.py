@@ -283,6 +283,16 @@ def _step_correct_lrc(asr_file: str, ref_file: str, output_dir: str,
         log_info(f"  High similarity: using reference lyrics directly")
         return (True, ref_file, tracked)
 
+    # Low similarity + shorter corrected → ASR likely poor (heavy reverb etc.)
+    # Skip the garbled calibration and use pre-aligned reference LRC directly.
+    if sim < 0.5 and len(ref_lines) > len(lines):
+        import shutil
+        final_lrc = os.path.join(output_dir, f"{safe_name}.lrc")
+        shutil.copy2(ref_lrc, final_lrc)
+        log_info(f"  Low similarity ({sim:.1%}) + shorter corrected ({len(lines)} vs ref {len(ref_lines)}): "
+                  f"ASR likely poor quality, using reference LRC directly")
+        return (True, final_lrc, tracked)
+
     return (True, corrected_txt, tracked)
 
 
@@ -321,6 +331,10 @@ def _step_correct_txt(asr_file: str, ref_file: str, output_dir: str,
         log_info(f"  Full-text similarity vs reference: {sim:.1%}")
         if sim >= FULL_TEXT_SIMILARITY_THRESHOLD:
             log_info(f"  High similarity: using reference lyrics directly")
+            return (True, ref_file, [corrected_txt] + extra_tracked)
+        if sim < 0.5 and len(ref_lines) > len(lines):
+            log_info(f"  Low similarity ({sim:.1%}) + shorter corrected ({len(lines)} vs ref {len(ref_lines)}): "
+                      f"ASR likely poor quality, using reference lyrics instead")
             return (True, ref_file, [corrected_txt] + extra_tracked)
 
         return (True, corrected_txt, [corrected_txt] + extra_tracked)

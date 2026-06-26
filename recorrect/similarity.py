@@ -78,7 +78,7 @@ def _similarity_en(a: str, b: str) -> float:
 
 MIN_MATCH_SCORE = 0.2
 SKIP_PENALTY = -0.05
-FULL_TEXT_SIMILARITY_THRESHOLD = 0.9
+FULL_TEXT_SIMILARITY_THRESHOLD = 0.95
 
 
 def full_text_similarity(corrected_lines: list[str], ref_lines: list[str]) -> float:

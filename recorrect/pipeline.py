@@ -367,7 +367,7 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
                     break
 
         # ── Quality gate: best possible ref match (single or combined) must
-        # be ≥ 70%, otherwise the ref is too different — keep ASR text. ──
+        # be ≥ 50%, otherwise the ref is too different — keep ASR text. ──
         if best_score < 0.5:
             corrected.append({
                 'text': asr_entries[i]['text'],
@@ -378,6 +378,16 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
             })
             i += 1
             continue
+
+        # If start_j backed up to a different ref but no SPLIT was found,
+        # the quality gate passed against ref[start_j] — make sure the
+        # output uses the ref that actually matched, not the original j.
+        if best_width == 1 and start_j != j:
+            j_score = similarity(merged_norm[i], ref_norms[j])
+            if best_score > j_score:
+                j = start_j
+                asr_to_ref[i] = j
+                matched_refs.add(j)
 
         # Check MERGE: do consecutive ASR lines match the same ref,
         # look textually similar, AND are close in time?

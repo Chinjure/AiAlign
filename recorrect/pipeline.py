@@ -368,7 +368,7 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
 
         # ── Quality gate: best possible ref match (single or combined) must
         # be ≥ 70%, otherwise the ref is too different — keep ASR text. ──
-        if best_score < 0.7:
+        if best_score < 0.5:
             corrected.append({
                 'text': asr_entries[i]['text'],
                 'start_time': asr_entries[i]['start_time'],

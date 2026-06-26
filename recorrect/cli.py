@@ -110,9 +110,10 @@ def _run_lrc_pipeline(args, base):
             corrected_lines = [l for l in f.read().splitlines() if l.strip()]
         ref_lines = [e['text'] for e in load_lrc(args.ref)]
         sim = full_text_similarity(corrected_lines, ref_lines)
+        print(f"Full-text similarity vs reference: {sim:.1%}")
         if sim >= FULL_TEXT_SIMILARITY_THRESHOLD:
             write_txt(ref_lines, corrected_txt_path)
-            print(f"High similarity ({sim:.1%}): using reference lyrics directly → {corrected_txt_path}")
+            print(f"High similarity: using reference lyrics directly → {corrected_txt_path}")
 
 
 def _run_text_pipeline(args, base):
@@ -229,9 +230,10 @@ def _run_text_pipeline(args, base):
         with open(args.ref, 'r', encoding='utf-8') as f:
             ref_lines = [l for l in f.read().splitlines() if l.strip()]
         sim = full_text_similarity(corrected_lines, ref_lines)
+        print(f"Full-text similarity vs reference: {sim:.1%}")
         if sim >= FULL_TEXT_SIMILARITY_THRESHOLD:
             write_txt(ref_lines, corrected_txt_path)
-            print(f"High similarity ({sim:.1%}): using reference lyrics directly → {corrected_txt_path}")
+            print(f"High similarity: using reference lyrics directly → {corrected_txt_path}")
 
 
 if __name__ == '__main__':

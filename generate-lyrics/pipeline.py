@@ -278,8 +278,9 @@ def _step_correct_lrc(asr_file: str, ref_file: str, output_dir: str,
     with open(ref_file, 'r', encoding='utf-8') as f:
         ref_lines = [l for l in f.read().splitlines() if l.strip()]
     sim = full_text_similarity(lines, ref_lines)
+    log_info(f"  Full-text similarity vs reference: {sim:.1%}")
     if sim >= FULL_TEXT_SIMILARITY_THRESHOLD:
-        log_info(f"  High similarity ({sim:.1%}): using reference lyrics directly")
+        log_info(f"  High similarity: using reference lyrics directly")
         return (True, ref_file, tracked)
 
     return (True, corrected_txt, tracked)
@@ -317,8 +318,9 @@ def _step_correct_txt(asr_file: str, ref_file: str, output_dir: str,
         with open(ref_file, 'r', encoding='utf-8') as f:
             ref_lines = [l for l in f.read().splitlines() if l.strip()]
         sim = full_text_similarity(lines, ref_lines)
+        log_info(f"  Full-text similarity vs reference: {sim:.1%}")
         if sim >= FULL_TEXT_SIMILARITY_THRESHOLD:
-            log_info(f"  High similarity ({sim:.1%}): using reference lyrics directly")
+            log_info(f"  High similarity: using reference lyrics directly")
             return (True, ref_file, [corrected_txt] + extra_tracked)
 
         return (True, corrected_txt, [corrected_txt] + extra_tracked)

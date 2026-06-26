@@ -78,3 +78,17 @@ def _similarity_en(a: str, b: str) -> float:
 
 MIN_MATCH_SCORE = 0.2
 SKIP_PENALTY = -0.05
+FULL_TEXT_SIMILARITY_THRESHOLD = 0.9
+
+
+def full_text_similarity(corrected_lines: list[str], ref_lines: list[str]) -> float:
+    """Compare corrected output against reference at full-text level.
+
+    Joins both into normalized strings and computes similarity.
+    Returns 0.0-1.0.
+    """
+    corrected_blob = ''.join(normalize(l) for l in corrected_lines)
+    ref_blob = ''.join(normalize(l) for l in ref_lines)
+    if not corrected_blob or not ref_blob:
+        return 0.0
+    return similarity(corrected_blob, ref_blob)

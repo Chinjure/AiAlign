@@ -13,6 +13,8 @@ from .lrclib import search as lrclib_search
 from .logger import log_info
 from .cleaner import Cleaner
 
+from recorrect.similarity import full_text_similarity, FULL_TEXT_SIMILARITY_THRESHOLD
+
 # --- Paths ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
@@ -270,6 +272,16 @@ def _step_correct_lrc(asr_file: str, ref_file: str, output_dir: str,
     for csv_file in [csv_asr, csv_ref]:
         if os.path.exists(csv_file):
             tracked.append(csv_file)
+
+    # Full-text similarity check: if corrected is close enough to reference,
+    # prefer the reference (it's human-curated, more reliable).
+    with open(ref_file, 'r', encoding='utf-8') as f:
+        ref_lines = [l for l in f.read().splitlines() if l.strip()]
+    sim = full_text_similarity(lines, ref_lines)
+    if sim >= FULL_TEXT_SIMILARITY_THRESHOLD:
+        log_info(f"  High similarity ({sim:.1%}): using reference lyrics directly")
+        return (True, ref_file, tracked)
+
     return (True, corrected_txt, tracked)
 
 
@@ -300,6 +312,15 @@ def _step_correct_txt(asr_file: str, ref_file: str, output_dir: str,
             log_info(f"  WARNING: calibration lost {loss_ratio:.0%} of ASR lines ({len(asr_input_lines)}->{len(lines)}), keeping reference")
             return (True, ref_file, extra_tracked)
         log_info(f"  Corrected: {corrected_txt} ({len(lines)} lines, asr={len(asr_input_lines)}, repeats={max(0, len(lines)-len(asr_input_lines))})")
+
+        # Full-text similarity check
+        with open(ref_file, 'r', encoding='utf-8') as f:
+            ref_lines = [l for l in f.read().splitlines() if l.strip()]
+        sim = full_text_similarity(lines, ref_lines)
+        if sim >= FULL_TEXT_SIMILARITY_THRESHOLD:
+            log_info(f"  High similarity ({sim:.1%}): using reference lyrics directly")
+            return (True, ref_file, [corrected_txt] + extra_tracked)
+
         return (True, corrected_txt, [corrected_txt] + extra_tracked)
 
     return (True, ref_file, extra_tracked)

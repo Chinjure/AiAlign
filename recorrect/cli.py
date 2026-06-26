@@ -16,6 +16,7 @@ from collections import Counter
 
 from .pipeline import correct_lyrics, correct_lyrics_lrc
 from .io_utils import write_lrc, write_txt, write_json_output, write_srt, has_timing, load_asr, load_lrc
+from .similarity import full_text_similarity, FULL_TEXT_SIMILARITY_THRESHOLD
 
 
 def main():
@@ -101,6 +102,17 @@ def _run_lrc_pipeline(args, base):
     if fmt in ('json', 'all'):
         write_json_output(corrected, base + '.json')
         print(f"JSON → {base}.json")
+
+    # ── Full-text similarity check
+    corrected_txt_path = base + '.txt'
+    if os.path.exists(corrected_txt_path):
+        with open(corrected_txt_path, 'r', encoding='utf-8') as f:
+            corrected_lines = [l for l in f.read().splitlines() if l.strip()]
+        ref_lines = [e['text'] for e in load_lrc(args.ref)]
+        sim = full_text_similarity(corrected_lines, ref_lines)
+        if sim >= FULL_TEXT_SIMILARITY_THRESHOLD:
+            write_txt(ref_lines, corrected_txt_path)
+            print(f"High similarity ({sim:.1%}): using reference lyrics directly → {corrected_txt_path}")
 
 
 def _run_text_pipeline(args, base):
@@ -207,6 +219,19 @@ def _run_text_pipeline(args, base):
         print("WARNING: Input has no timing info, LRC cannot be generated")
         write_txt([e['text'] for e in corrected], base + '.txt')
         print(f"TXT → {base}.txt")
+
+    # ── Full-text similarity check: if corrected output is >90% similar
+    #     to the reference, use the reference directly (it's more reliable).
+    corrected_txt_path = base + '.txt'
+    if os.path.exists(corrected_txt_path) and args.ref.lower().endswith('.txt'):
+        with open(corrected_txt_path, 'r', encoding='utf-8') as f:
+            corrected_lines = [l for l in f.read().splitlines() if l.strip()]
+        with open(args.ref, 'r', encoding='utf-8') as f:
+            ref_lines = [l for l in f.read().splitlines() if l.strip()]
+        sim = full_text_similarity(corrected_lines, ref_lines)
+        if sim >= FULL_TEXT_SIMILARITY_THRESHOLD:
+            write_txt(ref_lines, corrected_txt_path)
+            print(f"High similarity ({sim:.1%}): using reference lyrics directly → {corrected_txt_path}")
 
 
 if __name__ == '__main__':

@@ -1,9 +1,9 @@
 # Core: vocal separation (UVR)
-audio-separator>=0.18
+# audio-separator is installed separately by install.sh
+# (its diffq dependency needs C compilation — handled by the script)
 
-# Core: deep learning
-torch>=2.5
-torchaudio>=2.5
+# torch + torchaudio are installed separately by install.sh
+# (GPU version with CUDA) — do NOT add them here.
 
 # Qwen3-ASR transcription
 qwen-asr>=0.0.6

@@ -67,19 +67,19 @@ python -c "from modelscope import snapshot_download; \
 source venv/bin/activate
 
 # 单文件
-python -m generate-lyrics music.mp3
+python -m generate-lyrics music.mp3 --ref lyrics.txt
 
 # 指定输出目录
-python -m generate-lyrics music.mp3 -o ./output
+python -m generate-lyrics music.mp3 -o ./output --ref lyrics.txt
 
 # 保留中间文件
-python -m generate-lyrics music.mp3 --keep
+python -m generate-lyrics music.mp3 --keep --ref lyrics.txt
 
 # 批量处理
-python -m generate-lyrics --batch ./music_dir
+python -m generate-lyrics --batch ./music_dir --ref lyrics.txt
 
 # 上传到服务器
-python -m generate-lyrics music.mp3 --upload
+python -m generate-lyrics music.mp3 --upload --ref lyrics.txt
 ```
 
 ### 分步运行
@@ -108,7 +108,7 @@ python upload_song.py music.mp3 --lrc output.lrc --server http://your-server:por
 ```
 music file
   ├─ 元数据提取 (mutagen)
-  ├─ LRCLIB 歌词搜索
+  ├─ LRCLIB 歌词搜索 / --ref 本地引用
   ├─ 人声分离 (UVR MDX-NET, GPU)
   ├─ 语音转录 (Qwen3-ASR 1.7B, GPU)
   ├─ ASR 校准 (recorrect, CPU)

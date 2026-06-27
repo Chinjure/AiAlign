@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-AiAlign is an end-to-end lyrics pipeline: extract metadata → search LRCLIB → separate vocals (UVR MDX-NET) → transcribe (Qwen3-ASR 1.7B) → calibrate against reference lyrics (recorrect) → align to LRC (MTL_BDR) → optionally upload to music server.
+AiAlign is an end-to-end lyrics pipeline: extract metadata → search LRCLIB (or --ref local file) → separate vocals (UVR MDX-NET) → transcribe (Qwen3-ASR 1.7B) → calibrate against reference lyrics (recorrect) → align to LRC (MTL_BDR) → optionally upload to music server.
 
 ## Environment
 

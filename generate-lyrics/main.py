@@ -1,6 +1,6 @@
 """generate-lyrics — end-to-end LRC generation.
 
-Pipeline: extract → separate → transcribe → search → correct → align → cleanup
+Pipeline: extract → separate → transcribe → search/--ref → correct → align → cleanup
 """
 
 import argparse
@@ -66,19 +66,29 @@ def _process_one(music_file: str, args: argparse.Namespace) -> Optional[str]:
         fatal("3 (transcribe)", result)
     lyrics_txt = result
 
-    # Step 4: Search LRCLIB + recorrect (non-fatal, fall back to raw ASR)
+    # Step 4: Obtain reference lyrics + recorrect (non-fatal, fall back to raw ASR)
     align_input = lyrics_txt
-    ok, result, files = step_search(title, artist, output_dir)
-    if ok:
-        ref_lyrics = result
-        cleaner.track_all(files)
+    ref_lyrics = None
+    if args.ref:
+        if not os.path.exists(args.ref):
+            log_info(f"  WARNING: --ref file not found: {args.ref}, skipping correction")
+        else:
+            ref_lyrics = args.ref
+            log_info(f"  Using local reference: {args.ref}")
+    else:
+        ok, result, files = step_search(title, artist, output_dir)
+        if ok:
+            ref_lyrics = result
+            cleaner.track_all(files)
+        else:
+            log_info(f"  WARNING: LRCLIB search failed: {result}")
+
+    if ref_lyrics:
         ok, result, files = step_correct(lyrics_txt, ref_lyrics, output_dir, safe_name,
                                          vocal_wav=vocal_wav)
         cleaner.track_all(files)
         if ok:
             align_input = result
-    else:
-        log_info(f"  WARNING: LRCLIB search failed: {result}")
 
     # Step 5: Align → LRC
     if align_input.endswith('.lrc'):
@@ -132,6 +142,8 @@ def main():
     parser.add_argument('--upload', action='store_true', help='Upload after generation')
     parser.add_argument('--server', default='http://localhost:8080', help='Server URL')
     parser.add_argument('--keep', action='store_true', help='Keep intermediate files')
+    parser.add_argument('--ref', metavar='PATH', default=None,
+                        help='Use local reference lyrics file instead of LRCLIB')
     args = parser.parse_args()
 
     if not args.music_file and not args.batch:

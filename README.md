@@ -7,8 +7,8 @@
 ### 系统要求
 
 - Python >= 3.10
-- ffmpeg（用于音频格式转换）
-- NVIDIA GPU + 驱动 >= 535（可选，CPU 也能跑但转录步骤会慢很多）
+- ffmpeg（安装脚本会自动安装）
+- NVIDIA GPU + 驱动 >= 535（可选，CPU 也能跑但会慢很多）
 
 ### 一键安装
 
@@ -18,35 +18,23 @@ bash install.sh
 
 # CPU 版
 bash install.sh --cpu
-
-# 跳过小模型下载（后续手动下载）
-bash install.sh --no-models
 ```
 
 `install.sh` 做了这些事：
 
 1. 自动安装系统依赖（ffmpeg, python3-dev），支持 apt/brew/pacman/dnf
 2. 创建 Python 虚拟环境 `venv/`
-3. 安装 Python 依赖（小包）
+3. 安装 Python 依赖
 4. 安装 PyTorch（GPU 版，使用 `--index-url` 从 PyTorch CUDA 索引下载）
-5. 从 GitHub Releases 下载小模型文件（~190 MB）
 
 ### 手动安装
 
 ```bash
-# 1. 创建 venv
 python3 -m venv venv
 source venv/bin/activate
-
-# 2. 安装依赖
 pip install -r requirements.txt
-
-# 3. 安装 GPU 版 PyTorch（根据 CUDA 版本选择）
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu130
 pip install onnxruntime-gpu
-
-# 4. 下载小模型
-bash download_models.sh
 ```
 
 ## 模型文件
@@ -54,9 +42,9 @@ bash download_models.sh
 | 模型 | 大小 | 用途 | 获取方式 |
 |------|------|------|----------|
 | **Qwen3-ASR 1.7B** | ~4.4 GB | 歌声转录 | 首次运行时自动从 HuggingFace/ModelScope 下载 |
-| UVR MDX-NET | 64 MB | 人声分离 | `install.sh` 自动下载 |
-| MTL_BDR checkpoints | 123 MB | 歌词音频对齐 | `install.sh` 自动下载 |
-| FireRedVAD | 2.3 MB | 语音活动检测 | `install.sh` 自动下载 |
+| UVR MDX-NET | 64 MB | 人声分离 | 已包含在仓库中 |
+| MTL_BDR checkpoints | 123 MB | 歌词音频对齐 | 已包含在仓库中 |
+| FireRedVAD | 2.3 MB | 语音活动检测 | 已包含在仓库中 |
 
 ### 手动下载 Qwen3-ASR（可选，加速首次运行）
 
@@ -133,10 +121,9 @@ music file
 ```
 AiAlign/
 ├── install.sh                 # 一键安装脚本
-├── download_models.sh         # 模型下载脚本
 ├── requirements.txt           # Python 依赖
-├── generate-lyrics/           # 管线入口 (python -m generate-lyrics)
-├── recorrect/                 # ASR 歌词校准 (纯标准库)
+├── generate-lyrics/           # 管线入口
+├── recorrect/                 # ASR 歌词校准
 ├── Qwen3-aligner-main/        # Qwen3-ASR 转录
 ├── LyricsAlignment-MTL/       # MTL_BDR 歌词对齐
 ├── SeperateModels/            # UVR 人声分离模型

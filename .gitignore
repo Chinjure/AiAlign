@@ -1,11 +1,8 @@
 # Python virtual environment
 venv/
 
-# Model weights and large data
+# Model weights — large, downloaded separately
 Qwen3-aligner-main/Qwen/
-Qwen3-aligner-main/FireRedVAD/
-LyricsAlignment-MTL/checkpoints/
-SeperateModels/
 VolcalParse/vocalparse-weights/
 
 # Git repos inside subprojects

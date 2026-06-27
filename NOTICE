@@ -1,0 +1,29 @@
+AiAlign
+Copyright (c) 2025 Mayn
+
+This product includes software developed by the following third parties:
+
+---
+
+### Qwen3-Aligner (Qwen3-aligner-main/)
+Licensed under the Apache License, Version 2.0
+Copyright 2026 Alibaba Cloud
+Repository: https://github.com/QwenLM/Qwen3-ASR
+
+This product bundles the following components from Qwen3-Aligner:
+- Qwen3-ASR (speech transcription model)
+- Qwen3-ForcedAligner (forced alignment model)
+- FireRedVAD (voice activity detection)
+  Copyright FireRedTeam, licensed under Apache 2.0
+
+### LyricsAlignment-MTL (LyricsAlignment-MTL/)
+Licensed under the MIT License
+Copyright (c) 2022 Jiawen Huang
+Repository: https://github.com/jhuang448/LyricsAlignment-MTL
+Paper: "Improving Lyrics Alignment through Joint Pitch Detection", ICASSP 2022
+
+### Ultimate Vocal Remover / python-audio-separator
+Licensed under the MIT License
+Copyright Andrew Beveridge
+Repository: https://github.com/karaokenerds/python-audio-separator
+UVR MDX-NET model weights included via Git LFS.

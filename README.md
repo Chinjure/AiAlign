@@ -132,6 +132,16 @@ AiAlign/
 └── upload_song.py             # 上传脚本
 ```
 
+## 致谢
+
+本项目基于以下开源项目构建：
+
+| 项目 | 用途 | 协议 |
+|------|------|------|
+| [Qwen3-Aligner](https://github.com/QwenLM/Qwen3-ASR) | 语音转录与对齐 | Apache 2.0 |
+| [LyricsAlignment-MTL](https://github.com/jhuang448/LyricsAlignment-MTL) | 歌词音频对齐 | MIT |
+| [python-audio-separator](https://github.com/karaokenerds/python-audio-separator) | 人声分离 (UVR MDX-NET) | MIT |
+
 ## License
 
-MIT
+本项目基于 MIT 协议开源。依赖的子项目各保留其原始协议，详见 [NOTICE](NOTICE)。

@@ -10,7 +10,7 @@ from typing import Optional, List
 
 from .pipeline import (
     step_extract, step_separate, step_transcribe, step_correct, step_search,
-    step_align, step_upload, sanitize_filename,
+    step_align, sanitize_filename,
 )
 from .cleaner import Cleaner
 from .logger import log_info, log_error
@@ -103,12 +103,6 @@ def _process_one(music_file: str, args: argparse.Namespace) -> Optional[str]:
             if f != lrc_path:
                 cleaner.track(f)
 
-    # Upload (optional)
-    if args.upload:
-        ok, result, _ = step_upload(music_file, lrc_path, args.server)
-        if not ok:
-            log_info(f"  Upload WARNING: {result}")
-
     # Cleanup
     if not args.keep:
         print("=" * 55)
@@ -139,8 +133,6 @@ def main():
                         help='Output directory (default: same as music file)')
     parser.add_argument('--batch', metavar='DIR',
                         help='Batch process all music files in directory')
-    parser.add_argument('--upload', action='store_true', help='Upload after generation')
-    parser.add_argument('--server', default='http://localhost:8080', help='Server URL')
     parser.add_argument('--keep', action='store_true', help='Keep intermediate files')
     parser.add_argument('--ref', metavar='PATH', default=None,
                         help='Use local reference lyrics file instead of LRCLIB')

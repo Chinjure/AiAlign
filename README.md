@@ -77,9 +77,6 @@ python -m generate-lyrics music.mp3 --keep --ref lyrics.txt
 
 # 批量处理
 python -m generate-lyrics --batch ./music_dir --ref lyrics.txt
-
-# 上传到服务器
-python -m generate-lyrics music.mp3 --upload --ref lyrics.txt
 ```
 
 ### 分步运行
@@ -99,8 +96,6 @@ python -m recorrect asr.txt reference.txt -o out -f all
 # 4. 歌词对齐
 python align_one.py output/music_(Vocals).wav lyrics.txt output.lrc
 
-# 5. 上传
-python upload_song.py music.mp3 --lrc output.lrc --server http://your-server:port
 ```
 
 ## 管线架构
@@ -113,7 +108,7 @@ music file
   ├─ 语音转录 (Qwen3-ASR 1.7B, GPU)
   ├─ ASR 校准 (recorrect, CPU)
   ├─ 歌词对齐 (MTL_BDR, CPU)
-  └─ LRC 输出 / 上传
+  └─ LRC 输出
 ```
 
 ## 目录结构
@@ -128,8 +123,7 @@ AiAlign/
 ├── LyricsAlignment-MTL/       # MTL_BDR 歌词对齐
 ├── SeperateModels/            # UVR 人声分离模型
 ├── vocal_separate.py          # 人声分离脚本
-├── align_one.py               # 单文件对齐脚本
-└── upload_song.py             # 上传脚本
+└── align_one.py               # 单文件对齐脚本
 ```
 
 ## 致谢

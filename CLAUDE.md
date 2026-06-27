@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-AiAlign is an end-to-end lyrics pipeline: extract metadata → search LRCLIB (or --ref local file) → separate vocals (UVR MDX-NET) → transcribe (Qwen3-ASR 1.7B) → calibrate against reference lyrics (recorrect) → align to LRC (MTL_BDR) → optionally upload to music server.
+AiAlign is an end-to-end lyrics pipeline: extract metadata → search LRCLIB (or --ref local file) → separate vocals (UVR MDX-NET) → transcribe (Qwen3-ASR 1.7B) → calibrate against reference lyrics (recorrect) → align to LRC (MTL_BDR).
 
 ## Environment
 
@@ -19,7 +19,7 @@ AiAlign is an end-to-end lyrics pipeline: extract metadata → search LRCLIB (or
 source venv/bin/activate
 
 # End-to-end LRC generation (single file)
-python -m generate-lyrics <music_file> [-o output_dir] [--keep] [--upload]
+python -m generate-lyrics <music_file> [-o output_dir] [--keep] [--ref PATH]
 
 # End-to-end (batch)
 python -m generate-lyrics --batch <dir> [--keep]
@@ -28,8 +28,6 @@ python -m generate-lyrics --batch <dir> [--keep]
 python vocal_separate.py <audio> [output_dir]           # Vocal separation
 python -m recorrect <asr_file> <ref_file> -o out -f all  # ASR calibration
 python align_one.py <vocal_wav> <lyrics_txt> [output_lrc] # Lyrics alignment
-python upload_song.py <music_file> [--lrc <lrc>] [--server URL]
-
 # recorrect tests (stdlib only, no framework)
 cd recorrect && python test_align.py && python test_integration.py
 
@@ -48,7 +46,6 @@ music file
   │     ├─ text pipeline:  ASR .txt/.srt/.json + ref .txt → similarity probe-matching
   │     └─ dual-LRC pipeline: ASR .lrc + ref .lrc → time-aware 1:1 matching + merge/split
   ├─ align_one.py ──→ LyricsAlignment-MTL/ (MTL_BDR, CPU) ──→ .lrc
-  └─ upload_song.py ──→ POST /api/upload
 ```
 
 ### Top-level scripts
@@ -60,12 +57,11 @@ music file
 | `vocal_separate.py` | Wrapper around `audio-separator` CLI with fixed MDX-NET config |
 | `align_one.py` | Vocal WAV + lyrics TXT → MTL_BDR alignment → CSV → LRC |
 | `batch_align_lrc.py` | Batch version; imports MTL wrapper directly (in-process) |
-| `upload_song.py` | Multipart POST audio + LRC to music server |
 
 ### Key packages
 
 - **`recorrect/`** — ASR→reference lyric calibration. Stdlib only, two pipelines (text + dual-LRC). Entry: `python -m recorrect`. See `recorrect/CLAUDE.md` for detailed architecture.
-- **`generate-lyrics/`** — End-to-end orchestrator. Each pipeline step returns `(ok, result, [tracked_files])`; a `Cleaner` accumulates tracked files for rollback on fatal errors. Non-fatal steps (search, correct, upload) warn and continue.
+- **`generate-lyrics/`** — End-to-end orchestrator. Each pipeline step returns `(ok, result, [tracked_files])`; a `Cleaner` accumulates tracked files for rollback on fatal errors. Non-fatal steps (search, correct) warn and continue.
 - **`Qwen3-aligner-main/`** — Qwen3-ASR 1.7B transcription. `cli.py transcribe` subcommand.
 - **`LyricsAlignment-MTL/`** — MTL_BDR forced alignment model. `wrapper.py` exposes `align()`, `preprocess_from_file()`, `write_csv()`. `csv2lrc.py` converts alignment CSV to LRC.
 ### recorrect pipelines (high-level)

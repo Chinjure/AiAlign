@@ -14,8 +14,6 @@ python -m generate-lyrics <music_file> [options]
 |------|------|
 | `music_file` | 音乐文件路径，支持 `.mp3` `.flac` `.wav` |
 | `-o, --output` | 输出目录，默认同目录 |
-| `--upload` | 生成后上传到服务器 |
-| `--server URL` | 服务器地址，默认 `http://localhost:8080` |
 | `--keep` | 保留中间文件（调试用） |
 
 ### 示例
@@ -26,9 +24,6 @@ D:\miniconda\envs\lyrics_align\python.exe -m generate-lyrics song.mp3
 
 # 指定输出目录
 D:\miniconda\envs\lyrics_align\python.exe -m generate-lyrics song.mp3 -o D:\output
-
-# 生成后上传
-D:\miniconda\envs\lyrics_align\python.exe -m generate-lyrics song.mp3 --upload
 
 # 保留中间文件调试
 D:\miniconda\envs\lyrics_align\python.exe -m generate-lyrics song.mp3 --keep
@@ -59,17 +54,14 @@ D:\miniconda\envs\lyrics_align\python.exe -m generate-lyrics song.mp3 --keep
     │     人声 + 歌词 → 逐词强制对齐
     │     → {艺人} - {歌名}.lrc
     │
-    ├─ Step 6: 上传 (可选)
-    │     POST /api/upload
-    │
-    └─ Step 7: 清理
+    └─ Step 6: 清理
            删除 .txt .wav .csv .lrc .srt .json 中间文件
 ```
 
 ## 错误处理
 
 - **致命错误** (Step 1/2/3/5)：立即删除所有中间文件 → 写入 `error.log` → `exit(1)`
-- **非致命错误** (Step 4/6)：警告后继续，不影响 LRC 生成
+- **非致命错误** (Step 4)：警告后继续，不影响 LRC 生成
 - `error.log` 格式：
   ```
   [2026-06-23 17:30:00] ERROR Step 1/6 (extract): Could not determine title/artist

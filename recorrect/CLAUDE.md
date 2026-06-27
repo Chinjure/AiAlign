@@ -95,7 +95,6 @@ This package is one component in a lyrics-processing pipeline under `/home/user/
 ```
 get_lyrics.py (LRCLIB search) → Qwen3-aligner (ASR transcription)
     → recorrect/ (this package: calibrate ASR against reference)
-    → upload_song.py (upload to server)
 ```
 
 Other sibling packages: `generate-lyrics/`, `Qwen3-aligner-main/`, `LyricsAlignment-MTL/`.

@@ -466,28 +466,3 @@ def step_align(vocal_wav: str, lyrics_txt: str, output_dir: str, safe_name: str)
 
     log_info(f"  LRC: {lrc_path}")
     return (True, lrc_path, files)
-
-
-# ── Step 6: Upload (optional) ────────────────────────────────────────
-
-def step_upload(music_file: str, lrc_path: str, server_url: str = "http://localhost:8080") -> tuple:
-    """Returns (True, response_text, []) or (False, error, []). Non-fatal."""
-    import requests
-    log_info("Step 6/6: Upload to server")
-
-    try:
-        with open(music_file, 'rb') as af, open(lrc_path, 'rb') as lf:
-            resp = requests.post(
-                f"{server_url}/api/upload",
-                files={"audio": af, "lrc": lf},
-                timeout=30
-            )
-        if resp.status_code == 201:
-            data = resp.json()
-            info = f"id={data.get('id','?')} title={data.get('title','?')}"
-            log_info(f"  Uploaded: {info}")
-            return (True, info, [])
-        else:
-            return (False, f"Upload returned {resp.status_code}: {resp.text[:200]}", [])
-    except Exception as e:
-        return (False, f"Upload failed: {e}", [])

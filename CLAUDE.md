@@ -68,8 +68,6 @@ music file
 - **`generate-lyrics/`** — End-to-end orchestrator. Each pipeline step returns `(ok, result, [tracked_files])`; a `Cleaner` accumulates tracked files for rollback on fatal errors. Non-fatal steps (search, correct, upload) warn and continue.
 - **`Qwen3-aligner-main/`** — Qwen3-ASR 1.7B transcription. `cli.py transcribe` subcommand.
 - **`LyricsAlignment-MTL/`** — MTL_BDR forced alignment model. `wrapper.py` exposes `align()`, `preprocess_from_file()`, `write_csv()`. `csv2lrc.py` converts alignment CSV to LRC.
-- **`VolcalParse/`** — Singing voice transcription to AST tokens (lyrics + pitch + note + BPM). Separate research project, not in the main pipeline. See `VolcalParse/CLAUDE.md`.
-
 ### recorrect pipelines (high-level)
 
 The recorrect package has two distinct matching strategies:
@@ -92,9 +90,10 @@ The project is self-contained in `venv/`. The Windows version used separate cond
 
 ## Git-managed model weights
 
-Large files are `.gitignore`d and must be obtained separately:
-- `SeperateModels/UVR_MDXNET_Main.onnx`
-- `LyricsAlignment-MTL/checkpoints/checkpoint_MTL` and `checkpoint_BDR`
-- `Qwen3-aligner-main/FireRedVAD/model.pth.tar`
-- `Qwen3-aligner-main/Qwen/` (model weights)
-- `VolcalParse/vocalparse-weights/`
+Large model weights in `.gitignore` (must be obtained separately):
+- `Qwen3-aligner-main/Qwen/` — Qwen3-ASR 1.7B (~4.4 GB), auto-downloaded on first run
+
+Smaller model files are tracked via Git LFS:
+- `SeperateModels/` — UVR MDX-NET (64 MB)
+- `LyricsAlignment-MTL/checkpoints/` — MTL_BDR checkpoints (123 MB)
+- `Qwen3-aligner-main/FireRedVAD/` — FireRedVAD (2.3 MB)

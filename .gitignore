@@ -3,14 +3,12 @@ venv/
 
 # Model weights — large, downloaded separately
 Qwen3-aligner-main/Qwen/
-VolcalParse/vocalparse-weights/
 
 # Git repos inside subprojects
 generate-lyrics/.git/
 recorrect/.git/
 LyricsAlignment-MTL/.git/
 Qwen3-aligner-main/.git/
-VolcalParse/.git/
 
 # Python cache
 __pycache__/

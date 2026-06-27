@@ -200,7 +200,7 @@ def correct_lyrics(asr_input: str, ref_input: str, merge_fragments: bool = True)
 
 # ── LRC-to-LRC time-probe matching ──
 
-TIME_WINDOW = 3.0       # seconds — max time gap for matching
+TIME_WINDOW = 5.0       # seconds — max time gap for matching
 
 
 def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
@@ -231,15 +231,19 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
 
     # ── Text-based matching: ASR → Ref by similarity ──
 
-    # For each ASR line, find best-matching ref line (purely by text)
+    # For each ASR line, find best-matching ref line within the time window.
     asr_to_ref = {}  # i → j  (1:1 best match)
     matched_refs = set()
     scores = []
 
     for i in range(n_asr):
+        asr_t = asr_entries[i]['start_time']
         best_j = -1
         best_score = 0.0
         for j in range(n_ref):
+            dt = abs(asr_t - ref_entries[j]['start_time'])
+            if dt > time_window:
+                continue
             s = similarity(asr_norms[i], ref_norms[j])
             if s > best_score:
                 best_score = s
@@ -300,6 +304,9 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
                 best_j = -1
                 best_score = 0.0
                 for rj in range(n_ref):
+                    dt = abs(asr_entries[i]['start_time'] - ref_entries[rj]['start_time'])
+                    if dt > time_window:
+                        continue
                     s = similarity(combined, ref_norms[rj])
                     if s > best_score:
                         best_score = s
@@ -369,8 +376,17 @@ def correct_lyrics_lrc(asr_lrc_path: str, ref_lrc_path: str,
         # ── Quality gate: best possible ref match (single or combined) must
         # be ≥ 50%, otherwise the ref is too different — keep ASR text. ──
         if best_score < 0.5:
+            # Reconstruct merged text: the pre-processing merge may have
+            # absorbed consecutive ASR lines into this one.  When quality
+            # gate fails, we must output the FULL merged text, not just
+            # asr_entries[i], otherwise absorbed lines are silently lost.
+            text_parts = [asr_entries[i]['text']]
+            k = i + 1
+            while k < n_asr and k in skipped:
+                text_parts.append(asr_entries[k]['text'])
+                k += 1
             corrected.append({
-                'text': asr_entries[i]['text'],
+                'text': ' '.join(text_parts),
                 'start_time': asr_entries[i]['start_time'],
                 'asr_index': i,
                 'ref_index': -1,

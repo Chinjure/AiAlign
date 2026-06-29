@@ -164,6 +164,27 @@ else
     ok "torch  ($(python3 -c 'import torch; print(torch.__version__)'))  (CPU)"
 fi
 
+# ── Step 5: Download model weights ──────────────────────────
+say "[5/5] Model weights..."
+
+UVR_MODEL="UVR_MDXNET_Main.onnx"
+UVR_URL="https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/$UVR_MODEL"
+MODEL_DIR="$PROJECT_DIR/SeperateModels"
+
+if [ -f "$MODEL_DIR/$UVR_MODEL" ] && [ "$(stat -c%s "$MODEL_DIR/$UVR_MODEL" 2>/dev/null)" -gt 1000000 ]; then
+    ok "UVR MDX-NET model already present ($(du -h "$MODEL_DIR/$UVR_MODEL" | cut -f1))"
+else
+    echo "  Downloading UVR MDX-NET Main (~64 MB)..."
+    echo "  Source: $UVR_URL"
+    if wget -q --show-progress --timeout=60 -O "$MODEL_DIR/$UVR_MODEL" "$UVR_URL" 2>/dev/null; then
+        ok "UVR MDX-NET Main downloaded ($(du -h "$MODEL_DIR/$UVR_MODEL" | cut -f1))"
+    else
+        err "Failed to download UVR model. You can download it manually:"
+        echo "    wget -O $MODEL_DIR/$UVR_MODEL $UVR_URL"
+        echo "  The pipeline will still attempt to download it on first run."
+    fi
+fi
+
 # ── Done ────────────────────────────────────────────────────
 echo ""
 say "Setup complete!"

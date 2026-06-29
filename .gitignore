@@ -4,6 +4,11 @@ venv/
 # Model weights — large, downloaded separately
 Qwen3-aligner-main/Qwen/
 
+# UVR model — downloaded by install.sh
+SeperateModels/UVR_MDXNET_Main.onnx
+SeperateModels/mdx_model_data.json
+SeperateModels/vr_model_data.json
+
 # Git repos inside subprojects
 generate-lyrics/.git/
 recorrect/.git/

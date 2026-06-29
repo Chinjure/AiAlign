@@ -161,6 +161,7 @@ else
         echo "  Installing CPU-only torch..."
     fi
     pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+    pip install torchcodec
     ok "torch  ($(python3 -c 'import torch; print(torch.__version__)'))  (CPU)"
 fi
 
